@@ -187,20 +187,17 @@ const AdminDashboard: React.FC = () => {
         active: true, // Set active to true by default
       };
 
-      // Create FormData for multipart request
-      const formData = new FormData();
-      formData.append('movie', JSON.stringify(movieData));
-
+      // Use the new JSON endpoints
       if (editingMovie) {
-        await api.put(`/admin/movies/${editingMovie.id}`, formData, {
+        await api.put(`/admin/movies/${editingMovie.id}/json`, movieData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
           },
         });
       } else {
-        await api.post('/admin/movies', formData, {
+        await api.post('/admin/movies/json', movieData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
           },
         });
       }
