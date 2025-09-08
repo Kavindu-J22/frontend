@@ -133,20 +133,34 @@ const Payment: React.FC = () => {
   const validateForm = () => {
     const { cardNumber, cardholderName, expiryMonth, expiryYear, cvv } = paymentForm;
 
-    if (!cardNumber || cardNumber.replace(/\s/g, '').length < 13) {
-      setError('Please enter a valid card number');
+    // Card number must be exactly 16 digits
+    const cleanCardNumber = cardNumber.replace(/\s/g, '');
+    if (!cleanCardNumber || cleanCardNumber.length !== 16 || !/^\d{16}$/.test(cleanCardNumber)) {
+      setError('Please enter a valid 16-digit card number');
       return false;
     }
-    if (!cardholderName.trim()) {
-      setError('Please enter cardholder name');
+
+    // Cardholder name validation
+    if (!cardholderName.trim() || cardholderName.trim().length < 2 || cardholderName.trim().length > 50) {
+      setError('Please enter a valid cardholder name (2-50 characters)');
       return false;
     }
-    if (!expiryMonth || !expiryYear) {
-      setError('Please enter expiry date');
+
+    // Expiry month must be 01-12
+    if (!expiryMonth || !/^(0[1-9]|1[0-2])$/.test(expiryMonth)) {
+      setError('Please select a valid expiry month (01-12)');
       return false;
     }
-    if (!cvv || cvv.length < 3) {
-      setError('Please enter a valid CVV');
+
+    // Expiry year must be 4 digits
+    if (!expiryYear || !/^\d{4}$/.test(expiryYear)) {
+      setError('Please select a valid expiry year');
+      return false;
+    }
+
+    // CVV must be 3 or 4 digits
+    if (!cvv || !/^\d{3,4}$/.test(cvv)) {
+      setError('Please enter a valid CVV (3 or 4 digits)');
       return false;
     }
 
@@ -163,11 +177,13 @@ const Payment: React.FC = () => {
       const paymentData = {
         cardNumber: paymentForm.cardNumber.replace(/\s/g, ''),
         cardHolderName: paymentForm.cardholderName,
-        expiryMonth: paymentForm.expiryMonth,
+        expiryMonth: paymentForm.expiryMonth.padStart(2, '0'), // Ensure 2-digit format
         expiryYear: paymentForm.expiryYear,
         cvv: paymentForm.cvv,
-        amount: bookingDetails!.totalPrice,
       };
+
+      console.log('Payment data being sent:', paymentData);
+      console.log('Booking ID:', bookingId);
 
       const response = await dispatch(processPayment({
         bookingId: bookingId!,
@@ -177,10 +193,14 @@ const Payment: React.FC = () => {
       if (response.payload && response.payload.success) {
         navigate(`/booking-confirmation/${bookingId}`);
       } else {
-        setError(response.payload?.message || 'Payment failed. Please try again.');
+        const errorMessage = response.payload?.message || response.payload?.error || 'Payment failed. Please try again.';
+        console.error('Payment failed:', response.payload);
+        setError(errorMessage);
       }
     } catch (error: any) {
-      setError('Payment processing failed. Please try again.');
+      console.error('Payment processing error:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Payment processing failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setPaymentProcessing(false);
     }
@@ -291,6 +311,40 @@ const Payment: React.FC = () => {
                 </Alert>
               </CardContent>
             </Card>
+          </Grid>
+
+          {/* Test Cards Info */}
+          <Grid item xs={12}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                🧪 Test Cards for Payment Simulation
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                    ✅ Success Cards:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    4111111111111111 (Visa)<br/>
+                    5555555555554444 (Mastercard)<br/>
+                    378282246310005 (Amex)<br/>
+                    6011111111111117 (Discover)
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                    ❌ Failure Cards:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    2111111111111111 (Declined)<br/>
+                    1111111111111111 (Insufficient)
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
+                    Use any name, future date (e.g., 12/2025), and any CVV (e.g., 123)
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Alert>
           </Grid>
 
           {/* Payment Form */}

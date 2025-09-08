@@ -66,9 +66,10 @@ export const processPayment = createAsyncThunk(
   async ({ bookingId, paymentData }: { bookingId: string; paymentData: PaymentRequest }, { rejectWithValue }) => {
     try {
       const response = await api.post<ApiResponse<Payment>>(`/bookings/${bookingId}/pay`, paymentData);
-      return response.data.data;
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Payment failed');
+      console.error('Payment API error:', error.response?.data);
+      return rejectWithValue(error.response?.data || { message: 'Payment failed' });
     }
   }
 );
@@ -166,7 +167,7 @@ const bookingSlice = createSlice({
       })
       .addCase(processPayment.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.payment = action.payload || null;
+        state.payment = action.payload?.data || null;
       })
       .addCase(processPayment.rejected, (state, action) => {
         state.isLoading = false;
