@@ -184,18 +184,32 @@ const AdminDashboard: React.FC = () => {
         ...movieForm,
         duration: parseInt(movieForm.duration),
         imdbRating: parseFloat(movieForm.imdbRating),
+        active: true, // Set active to true by default
       };
 
+      // Create FormData for multipart request
+      const formData = new FormData();
+      formData.append('movie', JSON.stringify(movieData));
+
       if (editingMovie) {
-        await api.put(`/admin/movies/${editingMovie.id}`, movieData);
+        await api.put(`/admin/movies/${editingMovie.id}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
       } else {
-        await api.post('/admin/movies', movieData);
+        await api.post('/admin/movies', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
       }
 
       setMovieDialog(false);
       loadDashboardData();
     } catch (error: any) {
-      setError('Failed to save movie');
+      console.error('Save movie error:', error);
+      setError(error.response?.data?.message || 'Failed to save movie');
     }
   };
 
@@ -244,6 +258,7 @@ const AdminDashboard: React.FC = () => {
         screenNumber: parseInt(showtimeForm.screenNumber),
         totalSeats: parseInt(showtimeForm.totalSeats),
         ticketPrice: parseFloat(showtimeForm.ticketPrice),
+        active: true, // Set active to true by default
       };
 
       if (editingShowtime) {
@@ -255,7 +270,8 @@ const AdminDashboard: React.FC = () => {
       setShowtimeDialog(false);
       loadDashboardData();
     } catch (error: any) {
-      setError('Failed to save showtime');
+      console.error('Save showtime error:', error);
+      setError(error.response?.data?.message || 'Failed to save showtime');
     }
   };
 
