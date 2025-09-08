@@ -313,40 +313,6 @@ const Payment: React.FC = () => {
             </Card>
           </Grid>
 
-          {/* Test Cards Info */}
-          <Grid item xs={12}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                🧪 Test Cards for Payment Simulation
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    ✅ Success Cards:
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                    4111111111111111 (Visa)<br/>
-                    5555555555554444 (Mastercard)<br/>
-                    378282246310005 (Amex)<br/>
-                    6011111111111117 (Discover)
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    ❌ Failure Cards:
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                    2111111111111111 (Declined)<br/>
-                    1111111111111111 (Insufficient)
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
-                    Use any name, future date (e.g., 12/2025), and any CVV (e.g., 123)
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Alert>
-          </Grid>
-
           {/* Payment Form */}
           <Grid item xs={12} md={7}>
             <Paper sx={{ p: 3 }}>
