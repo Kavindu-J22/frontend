@@ -103,7 +103,7 @@ const movieSlice = createSlice({
       })
       .addCase(fetchMovieById.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.selectedMovie = action.payload;
+        state.selectedMovie = action.payload || null;
       })
       .addCase(fetchMovieById.rejected, (state, action) => {
         state.isLoading = false;

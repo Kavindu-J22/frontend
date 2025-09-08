@@ -127,7 +127,7 @@ const bookingSlice = createSlice({
       })
       .addCase(fetchSeatAvailability.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.seatAvailability = action.payload;
+        state.seatAvailability = action.payload || null;
       })
       .addCase(fetchSeatAvailability.rejected, (state, action) => {
         state.isLoading = false;
@@ -140,7 +140,7 @@ const bookingSlice = createSlice({
       })
       .addCase(createBooking.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentBooking = action.payload;
+        state.currentBooking = action.payload || null;
       })
       .addCase(createBooking.rejected, (state, action) => {
         state.isLoading = false;
@@ -166,7 +166,7 @@ const bookingSlice = createSlice({
       })
       .addCase(processPayment.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.payment = action.payload;
+        state.payment = action.payload || null;
       })
       .addCase(processPayment.rejected, (state, action) => {
         state.isLoading = false;
@@ -179,7 +179,7 @@ const bookingSlice = createSlice({
       })
       .addCase(fetchTicket.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.ticket = action.payload;
+        state.ticket = action.payload || null;
       })
       .addCase(fetchTicket.rejected, (state, action) => {
         state.isLoading = false;

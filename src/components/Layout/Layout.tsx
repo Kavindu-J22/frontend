@@ -59,7 +59,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logout() as any);
     handleMenuClose();
     navigate('/');
   };
