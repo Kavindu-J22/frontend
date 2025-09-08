@@ -43,7 +43,7 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/movies" element={<Movies />} />
-                <Route path="/movies/:id" element={<MovieDetails />} />
+                <Route path="/movies/:movieId" element={<MovieDetails />} />
 
                 {/* Protected Routes */}
                 <Route path="/seat-selection/:showtimeId" element={

@@ -20,6 +20,7 @@ export interface Movie {
   rating: string;
   imdbRating?: number;
   trailerUrl?: string;
+  releaseDate: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
