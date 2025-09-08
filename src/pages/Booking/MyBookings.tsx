@@ -498,7 +498,10 @@ const MyBookings: React.FC = () => {
                   )}
 
                   <Typography variant="caption" color="text.secondary">
-                    Booking ID: {selectedBooking.id.slice(-8).toUpperCase()}
+                    Booking Reference: {selectedBooking.bookingReference || selectedBooking.id.slice(-8).toUpperCase()}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Booking ID: {selectedBooking.id}
                   </Typography>
                 </Paper>
 

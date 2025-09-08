@@ -87,19 +87,47 @@ const TicketValidation: React.FC = () => {
           setSuccess('Ticket validated successfully!');
         }
       } else {
-        // Validate by booking ID - first check if booking exists
+        // Validate by booking ID or booking reference
+        let bookingData = null;
+        let actualBookingId = bookingId.trim();
+
         try {
-          const bookingResponse = await api.get(`/bookings/${bookingId.trim()}`);
-          const bookingData = bookingResponse.data.data;
+          // First try to get booking by ID directly
+          let bookingResponse;
+          try {
+            bookingResponse = await api.get(`/bookings/${actualBookingId}`);
+            bookingData = bookingResponse.data.data;
+          } catch (directError: any) {
+            if (directError.response?.status === 404) {
+              // If not found by ID, try to search by booking reference
+              try {
+                const searchResponse = await api.get(`/admin/bookings/search`, {
+                  params: { bookingReference: actualBookingId }
+                });
+                if (searchResponse.data.success && searchResponse.data.data.length > 0) {
+                  bookingData = searchResponse.data.data[0];
+                  actualBookingId = bookingData.id; // Use the actual ID for further operations
+                } else {
+                  throw new Error('Booking not found by reference');
+                }
+              } catch (referenceError) {
+                // If both direct ID and reference search fail, show error
+                setError(`Booking ID/Reference "${bookingId.trim()}" not found. Please check the booking ID or reference.`);
+                return;
+              }
+            } else {
+              throw directError;
+            }
+          }
 
           if (bookingData.status !== 'CONFIRMED') {
             setError(`Booking found but not confirmed. Status: ${bookingData.status}. Tickets are only generated for confirmed bookings.`);
             return;
           }
 
-          // Now try to get the ticket
+          // Now try to get the ticket using the actual booking ID
           try {
-            const ticketResponse = await api.get(`/tickets/booking/${bookingId.trim()}`);
+            const ticketResponse = await api.get(`/tickets/booking/${actualBookingId}`);
             const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
 
             // Combine ticket and booking data
@@ -127,11 +155,11 @@ const TicketValidation: React.FC = () => {
                 setError('Ticket not found. Attempting to generate ticket for confirmed booking...');
 
                 // Try to generate the ticket by calling the backend
-                const generateResponse = await api.post(`/admin/tickets/generate/${bookingId.trim()}`);
+                const generateResponse = await api.post(`/admin/tickets/generate/${actualBookingId}`);
 
                 if (generateResponse.data.success) {
                   // Now try to get the newly generated ticket
-                  const newTicketResponse = await api.get(`/tickets/booking/${bookingId.trim()}`);
+                  const newTicketResponse = await api.get(`/tickets/booking/${actualBookingId}`);
                   const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
 
                   const ticketData = newTicketResponse.data.data;
@@ -155,7 +183,7 @@ const TicketValidation: React.FC = () => {
               } catch (generateError: any) {
                 console.error('Failed to generate ticket:', generateError);
                 // If the generate endpoint doesn't exist or fails, show a helpful message
-                setError(`Booking ID ${bookingId.trim()} is confirmed but no ticket exists. This can happen if:
+                setError(`Booking ID ${actualBookingId} is confirmed but no ticket exists. This can happen if:
                 1. The payment was processed but ticket generation failed
                 2. There was a system error during ticket creation
                 3. The booking was manually confirmed without payment
@@ -170,11 +198,7 @@ Please check the payment status and contact system administrator if needed.`);
           }
 
         } catch (bookingError: any) {
-          if (bookingError.response?.status === 404) {
-            setError(`Booking ID ${bookingId.trim()} not found.`);
-          } else {
-            setError(`Error validating booking: ${bookingError.response?.data?.message || bookingError.message}`);
-          }
+          setError(`Error validating booking: ${bookingError.response?.data?.message || bookingError.message}`);
           return;
         }
       }
@@ -267,11 +291,12 @@ Please check the payment status and contact system administrator if needed.`);
                 ) : (
                   <TextField
                     fullWidth
-                    label="Booking ID"
+                    label="Booking ID or Reference"
                     value={bookingId}
                     onChange={(e) => setBookingId(e.target.value)}
-                    placeholder="Enter booking ID (e.g., BK1234567890)"
+                    placeholder="Enter booking reference (e.g., BK1234567890) or full booking ID"
                     disabled={loading}
+                    helperText="You can use either the booking reference (BK...) or the full booking ID from the ticket"
                   />
                 )}
               </Grid>
@@ -418,7 +443,7 @@ Please check the payment status and contact system administrator if needed.`);
                         Total Amount
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        ${ticketDetails.booking.totalPrice.toFixed(2)}
+                        LKR {ticketDetails.booking.totalPrice.toFixed(2)}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
