@@ -41,10 +41,13 @@ import {
   Schedule,
   AttachMoney,
   Visibility,
+  QrCodeScanner,
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import api from '../../config/api';
+import TicketValidation from './TicketValidation';
+import Reports from './Reports';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -388,6 +391,8 @@ const AdminDashboard: React.FC = () => {
               <Tab label="Showtimes" icon={<Schedule />} />
               <Tab label="Users" icon={<People />} />
               <Tab label="Bookings" icon={<Assessment />} />
+              <Tab label="Reports" icon={<Assessment />} />
+              <Tab label="Validate Tickets" icon={<Visibility />} />
             </Tabs>
           </Box>
 
@@ -592,6 +597,16 @@ const AdminDashboard: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          </TabPanel>
+
+          {/* Reports Tab */}
+          <TabPanel value={tabValue} index={4}>
+            <Reports />
+          </TabPanel>
+
+          {/* Ticket Validation Tab */}
+          <TabPanel value={tabValue} index={5}>
+            <TicketValidation />
           </TabPanel>
         </Card>
 

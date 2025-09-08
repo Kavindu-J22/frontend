@@ -35,12 +35,16 @@ interface SeatAvailability {
 
 interface ShowtimeDetails {
   id: string;
+  movieId: string;
   movieTitle: string;
   startTime: string;
   endTime: string;
   screenNumber: number;
   ticketPrice: number;
   totalSeats: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const SeatSelection: React.FC = () => {
@@ -67,9 +71,11 @@ const SeatSelection: React.FC = () => {
       const response = await api.get(`/showtimes/${showtimeId}`);
       if (response.data.success) {
         setShowtimeDetails(response.data.data);
+        setError(null);
       }
     } catch (error: any) {
-      setError('Failed to fetch showtime details');
+      console.error('Error fetching showtime details:', error);
+      setError('Failed to load showtime details. Please try again.');
     }
   };
 

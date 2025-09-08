@@ -32,27 +32,29 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import api from '../../config/api';
 
-interface Booking {
+interface BookingWithDetails {
   id: string;
-  movieTitle: string;
-  moviePoster?: string;
   showtimeId: string;
-  startTime: string;
-  screenNumber: number;
-  selectedSeats: string[];
-  totalAmount: number;
-  status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED';
+  userId: string;
+  bookedSeatNumbers: string[];
+  totalPrice: number;
+  status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
+  bookingReference: string;
   createdAt: string;
-  ticketId?: string;
-  qrCode?: string;
+  updatedAt: string;
+  // Additional fields for display
+  movieTitle?: string;
+  startTime?: string;
+  screenNumber?: number;
+  qrCodeImageBase64?: string;
 }
 
 const MyBookings: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingWithDetails | null>(null);
   const [ticketDialog, setTicketDialog] = useState(false);
 
   useEffect(() => {
@@ -66,7 +68,33 @@ const MyBookings: React.FC = () => {
       setLoading(true);
       const response = await api.get('/bookings/my-bookings');
       if (response.data.success) {
-        setBookings(response.data.data || []);
+        const bookingsData = response.data.data || [];
+
+        // Fetch showtime details for each booking
+        const bookingsWithDetails = await Promise.all(
+          bookingsData.map(async (booking: any) => {
+            try {
+              const showtimeResponse = await api.get(`/showtimes/${booking.showtimeId}`);
+              if (showtimeResponse.data.success) {
+                const showtimeData = showtimeResponse.data.data;
+                return {
+                  ...booking,
+                  movieTitle: showtimeData.movieTitle || 'Unknown Movie',
+                  startTime: showtimeData.startTime,
+                  screenNumber: showtimeData.screenNumber,
+                };
+              }
+            } catch (showtimeError) {
+              console.error('Failed to fetch showtime details:', showtimeError);
+            }
+            return {
+              ...booking,
+              movieTitle: 'Unknown Movie',
+            };
+          })
+        );
+
+        setBookings(bookingsWithDetails);
       }
     } catch (error: any) {
       setError('Failed to fetch bookings');
@@ -76,19 +104,20 @@ const MyBookings: React.FC = () => {
     }
   };
 
-  const handleViewTicket = async (booking: Booking) => {
-    if (booking.status === 'CONFIRMED' && booking.ticketId) {
+  const handleViewTicket = async (booking: BookingWithDetails) => {
+    if (booking.status === 'CONFIRMED') {
       try {
-        const response = await api.get(`/tickets/${booking.ticketId}`);
+        const response = await api.get(`/tickets/booking/${booking.id}`);
         if (response.data.success) {
           setSelectedBooking({
             ...booking,
-            qrCode: response.data.data.qrCode,
+            qrCodeImageBase64: response.data.data.qrCodeImageBase64,
           });
           setTicketDialog(true);
         }
       } catch (error: any) {
         setError('Failed to fetch ticket details');
+        console.error('Ticket fetch error:', error);
       }
     }
   };
@@ -96,10 +125,11 @@ const MyBookings: React.FC = () => {
   const handleCancelBooking = async (bookingId: string) => {
     if (window.confirm('Are you sure you want to cancel this booking?')) {
       try {
-        await api.put(`/bookings/${bookingId}/cancel`);
+        await api.delete(`/bookings/${bookingId}`);
         fetchBookings(); // Refresh bookings
       } catch (error: any) {
         setError('Failed to cancel booking');
+        console.error('Cancel booking error:', error);
       }
     }
   };
@@ -182,25 +212,25 @@ const MyBookings: React.FC = () => {
                       <Box display="flex" alignItems="center" mb={1}>
                         <Schedule sx={{ mr: 1, fontSize: 20 }} />
                         <Typography variant="body2">
-                          {formatDateTime(booking.startTime)}
+                          {booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}
                         </Typography>
                       </Box>
                       <Box display="flex" alignItems="center" mb={1}>
                         <Movie sx={{ mr: 1, fontSize: 20 }} />
                         <Typography variant="body2">
-                          Screen {booking.screenNumber}
+                          Screen {booking.screenNumber || 'N/A'}
                         </Typography>
                       </Box>
                       <Box display="flex" alignItems="center" mb={1}>
                         <EventSeat sx={{ mr: 1, fontSize: 20 }} />
                         <Typography variant="body2">
-                          Seats: {booking.selectedSeats.join(', ')}
+                          Seats: {booking.bookedSeatNumbers.join(', ')}
                         </Typography>
                       </Box>
                       <Box display="flex" alignItems="center">
                         <AttachMoney sx={{ mr: 1, fontSize: 20 }} />
                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          ${booking.totalAmount.toFixed(2)}
+                          ${booking.totalPrice.toFixed(2)}
                         </Typography>
                       </Box>
                     </Box>
@@ -268,7 +298,7 @@ const MyBookings: React.FC = () => {
                         Date & Time
                       </Typography>
                       <Typography variant="body1">
-                        {formatDateTime(selectedBooking.startTime)}
+                        {selectedBooking.startTime ? formatDateTime(selectedBooking.startTime) : 'N/A'}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -276,7 +306,7 @@ const MyBookings: React.FC = () => {
                         Screen
                       </Typography>
                       <Typography variant="body1">
-                        Screen {selectedBooking.screenNumber}
+                        Screen {selectedBooking.screenNumber || 'N/A'}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -284,7 +314,7 @@ const MyBookings: React.FC = () => {
                         Seats
                       </Typography>
                       <Typography variant="body1">
-                        {selectedBooking.selectedSeats.join(', ')}
+                        {selectedBooking.bookedSeatNumbers.join(', ')}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -292,16 +322,16 @@ const MyBookings: React.FC = () => {
                         Total Amount
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        ${selectedBooking.totalAmount.toFixed(2)}
+                        ${selectedBooking.totalPrice.toFixed(2)}
                       </Typography>
                     </Grid>
                   </Grid>
 
-                  {selectedBooking.qrCode && (
+                  {selectedBooking.qrCodeImageBase64 && (
                     <Box sx={{ mb: 2 }}>
                       <Box
                         component="img"
-                        src={`data:image/png;base64,${selectedBooking.qrCode}`}
+                        src={`data:image/png;base64,${selectedBooking.qrCodeImageBase64}`}
                         alt="QR Code"
                         sx={{ maxWidth: '200px', height: 'auto' }}
                       />

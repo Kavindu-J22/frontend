@@ -31,15 +31,19 @@ import api from '../../config/api';
 
 interface BookingConfirmation {
   id: string;
-  movieTitle: string;
-  startTime: string;
-  screenNumber: number;
-  selectedSeats: string[];
-  totalAmount: number;
-  status: string;
-  ticketId: string;
-  qrCode?: string;
+  showtimeId: string;
+  userId: string;
+  bookedSeatNumbers: string[];
+  totalPrice: number;
+  status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
+  bookingReference: string;
   createdAt: string;
+  updatedAt: string;
+  // Additional fields for display
+  movieTitle?: string;
+  startTime?: string;
+  screenNumber?: number;
+  qrCodeImageBase64?: string;
 }
 
 const BookingConfirmation: React.FC = () => {
@@ -64,26 +68,41 @@ const BookingConfirmation: React.FC = () => {
       if (response.data.success) {
         const bookingData = response.data.data;
 
+        // Fetch showtime details to get movie title and show time
+        let showtimeDetails = null;
+        try {
+          const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
+          if (showtimeResponse.data.success) {
+            showtimeDetails = showtimeResponse.data.data;
+          }
+        } catch (showtimeError) {
+          console.error('Failed to fetch showtime details:', showtimeError);
+        }
+
         // Fetch ticket details if booking is confirmed
-        if (bookingData.status === 'CONFIRMED' && bookingData.ticketId) {
+        let ticketData = null;
+        if (bookingData.status === 'CONFIRMED') {
           try {
-            const ticketResponse = await api.get(`/tickets/${bookingData.ticketId}`);
+            const ticketResponse = await api.get(`/tickets/booking/${bookingId}`);
             if (ticketResponse.data.success) {
-              setBooking({
-                ...bookingData,
-                qrCode: ticketResponse.data.data.qrCode,
-              });
-            } else {
-              setBooking(bookingData);
+              ticketData = ticketResponse.data.data;
             }
           } catch (ticketError) {
-            setBooking(bookingData);
+            console.error('Failed to fetch ticket details:', ticketError);
           }
-        } else {
-          setBooking(bookingData);
         }
+
+        // Combine all data
+        setBooking({
+          ...bookingData,
+          movieTitle: showtimeDetails?.movieTitle || 'Unknown Movie',
+          startTime: showtimeDetails?.startTime,
+          screenNumber: showtimeDetails?.screenNumber,
+          qrCodeImageBase64: ticketData?.qrCodeImageBase64,
+        });
       }
     } catch (error: any) {
+      console.error('Error fetching booking confirmation:', error);
       setError('Failed to fetch booking confirmation');
     } finally {
       setLoading(false);
@@ -178,7 +197,7 @@ const BookingConfirmation: React.FC = () => {
                       Show Time
                     </Typography>
                     <Typography variant="body1">
-                      {formatDateTime(booking.startTime)}
+                      {booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}
                     </Typography>
                   </Box>
                 </Box>
@@ -192,7 +211,7 @@ const BookingConfirmation: React.FC = () => {
                       Screen
                     </Typography>
                     <Typography variant="body1">
-                      Screen {booking.screenNumber}
+                      Screen {booking.screenNumber || 'N/A'}
                     </Typography>
                   </Box>
                 </Box>
@@ -206,7 +225,7 @@ const BookingConfirmation: React.FC = () => {
                       Seats
                     </Typography>
                     <Typography variant="body1">
-                      {booking.selectedSeats.join(', ')}
+                      {booking.bookedSeatNumbers.join(', ')}
                     </Typography>
                   </Box>
                 </Box>
@@ -220,7 +239,7 @@ const BookingConfirmation: React.FC = () => {
                       Total Amount
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                      ${booking.totalAmount.toFixed(2)}
+                      ${booking.totalPrice.toFixed(2)}
                     </Typography>
                   </Box>
                 </Box>
@@ -241,7 +260,7 @@ const BookingConfirmation: React.FC = () => {
         </Card>
 
         {/* QR Code Ticket (Only for confirmed bookings) */}
-        {isConfirmed && booking.qrCode && (
+        {isConfirmed && booking.qrCodeImageBase64 && (
           <Card sx={{ mb: 4 }}>
             <CardContent sx={{ p: 4, textAlign: 'center' }}>
               <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
@@ -254,7 +273,7 @@ const BookingConfirmation: React.FC = () => {
               <Paper sx={{ p: 3, mb: 3, bgcolor: 'background.default', display: 'inline-block' }}>
                 <Box
                   component="img"
-                  src={`data:image/png;base64,${booking.qrCode}`}
+                  src={`data:image/png;base64,${booking.qrCodeImageBase64}`}
                   alt="QR Code Ticket"
                   sx={{ maxWidth: '200px', height: 'auto' }}
                 />
