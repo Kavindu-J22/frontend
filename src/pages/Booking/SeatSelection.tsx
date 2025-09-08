@@ -240,7 +240,7 @@ const SeatSelection: React.FC = () => {
                     <Box display="flex" alignItems="center">
                       <AttachMoney sx={{ mr: 1, fontSize: 20 }} />
                       <Typography variant="body2">
-                        ${showtimeDetails.ticketPrice} per seat
+                        LKR {showtimeDetails.ticketPrice} per seat
                       </Typography>
                     </Box>
                   </Grid>
@@ -379,7 +379,7 @@ const SeatSelection: React.FC = () => {
                   Price per Seat
                 </Typography>
                 <Typography variant="body1">
-                  ${showtimeDetails.ticketPrice.toFixed(2)}
+                  LKR {showtimeDetails.ticketPrice.toFixed(2)}
                 </Typography>
               </Box>
 
@@ -387,7 +387,7 @@ const SeatSelection: React.FC = () => {
 
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  Total Amount: ${totalPrice.toFixed(2)}
+                  Total Amount: LKR {totalPrice.toFixed(2)}
                 </Typography>
               </Box>
 

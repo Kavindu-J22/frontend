@@ -300,7 +300,7 @@ const Payment: React.FC = () => {
                     Total Amount
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    ${bookingDetails.totalPrice.toFixed(2)}
+                    LKR {bookingDetails.totalPrice.toFixed(2)}
                   </Typography>
                 </Box>
 
@@ -454,7 +454,7 @@ const Payment: React.FC = () => {
                   startIcon={paymentProcessing ? <CircularProgress size={20} /> : <CheckCircle />}
                   sx={{ flex: 2 }}
                 >
-                  {paymentProcessing ? 'Processing Payment...' : `Pay $${bookingDetails.totalPrice.toFixed(2)}`}
+                  {paymentProcessing ? 'Processing Payment...' : `Pay LKR ${bookingDetails.totalPrice.toFixed(2)}`}
                 </Button>
               </Box>
 

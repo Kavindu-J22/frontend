@@ -272,7 +272,7 @@ const MyBookings: React.FC = () => {
             </div>
 
             <div class="total-amount">
-              Total: $${booking.totalPrice.toFixed(2)}
+              Total: LKR ${booking.totalPrice.toFixed(2)}
             </div>
 
             ${booking.qrCodeImageBase64 ? `
@@ -386,7 +386,7 @@ const MyBookings: React.FC = () => {
                       <Box display="flex" alignItems="center">
                         <AttachMoney sx={{ mr: 1, fontSize: 20 }} />
                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          ${booking.totalPrice.toFixed(2)}
+                          LKR {booking.totalPrice.toFixed(2)}
                         </Typography>
                       </Box>
                     </Box>
@@ -478,7 +478,7 @@ const MyBookings: React.FC = () => {
                         Total Amount
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        ${selectedBooking.totalPrice.toFixed(2)}
+                        LKR {selectedBooking.totalPrice.toFixed(2)}
                       </Typography>
                     </Grid>
                   </Grid>

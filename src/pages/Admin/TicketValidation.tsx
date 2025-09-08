@@ -84,17 +84,22 @@ const TicketValidation: React.FC = () => {
           params: { qrCodeData: qrCodeData.trim() }
         });
       } else {
-        // Validate by booking ID - get ticket details for the booking
-        response = await api.get(`/tickets/booking/${bookingId.trim()}`);
-
-        if (response.data.success) {
-          // Also get booking details to show complete information
+        // Validate by booking ID - first check if booking exists
+        try {
           const bookingResponse = await api.get(`/bookings/${bookingId.trim()}`);
-          const showtimeResponse = await api.get(`/showtimes/${bookingResponse.data.data.showtimeId}`);
+          const bookingData = bookingResponse.data.data;
+
+          if (bookingData.status !== 'CONFIRMED') {
+            setError(`Booking found but not confirmed. Status: ${bookingData.status}. Tickets are only generated for confirmed bookings.`);
+            return;
+          }
+
+          // Now try to get the ticket
+          const ticketResponse = await api.get(`/tickets/booking/${bookingId.trim()}`);
+          const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
 
           // Combine ticket and booking data
-          const ticketData = response.data.data;
-          const bookingData = bookingResponse.data.data;
+          const ticketData = ticketResponse.data.data;
           const showtimeData = showtimeResponse.data.data;
 
           setTicketDetails({
@@ -109,6 +114,14 @@ const TicketValidation: React.FC = () => {
             }
           });
           setSuccess('Ticket found and validated successfully!');
+          return;
+
+        } catch (ticketError: any) {
+          if (ticketError.response?.status === 404) {
+            setError(`Booking ID ${bookingId.trim()} exists but no ticket has been generated yet. This usually means the booking payment is not confirmed.`);
+          } else {
+            setError(`Error validating booking: ${ticketError.response?.data?.message || ticketError.message}`);
+          }
           return;
         }
       }

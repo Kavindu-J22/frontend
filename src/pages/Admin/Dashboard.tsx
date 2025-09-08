@@ -412,7 +412,7 @@ const AdminDashboard: React.FC = () => {
                   <AttachMoney color="primary" sx={{ mr: 2 }} />
                   <Box>
                     <Typography variant="h4" component="div">
-                      ${stats.totalRevenue || '0'}
+                      LKR {stats.totalRevenue || '0'}
                     </Typography>
                     <Typography color="text.secondary">
                       Total Revenue
@@ -536,7 +536,7 @@ const AdminDashboard: React.FC = () => {
                       </TableCell>
                       <TableCell>Screen {showtime.screenNumber}</TableCell>
                       <TableCell>{showtime.totalSeats}</TableCell>
-                      <TableCell>${showtime.ticketPrice}</TableCell>
+                      <TableCell>LKR {showtime.ticketPrice}</TableCell>
                       <TableCell>
                         <IconButton
                           size="small"
@@ -619,7 +619,7 @@ const AdminDashboard: React.FC = () => {
                       <TableCell>{booking.userEmail || 'Unknown User'}</TableCell>
                       <TableCell>{booking.movieTitle || 'Unknown Movie'}</TableCell>
                       <TableCell>{booking.bookedSeatNumbers?.join(', ') || 'N/A'}</TableCell>
-                      <TableCell>${booking.totalPrice?.toFixed(2) || '0.00'}</TableCell>
+                      <TableCell>LKR {booking.totalPrice?.toFixed(2) || '0.00'}</TableCell>
                       <TableCell>
                         <Chip
                           label={booking.status}
@@ -818,7 +818,7 @@ const AdminDashboard: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Ticket Price ($)"
+                  label="Ticket Price (LKR)"
                   type="number"
                   inputProps={{ step: 0.01, min: 0 }}
                   value={showtimeForm.ticketPrice}

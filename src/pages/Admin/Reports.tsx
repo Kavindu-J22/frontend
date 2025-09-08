@@ -54,18 +54,13 @@ function TabPanel(props: TabPanelProps) {
 }
 
 interface SalesReport {
+  startDate: string;
+  endDate: string;
   totalRevenue: number;
   totalBookings: number;
   totalTicketsSold: number;
-  averageTicketPrice: number;
   dailySales: Array<{
     date: string;
-    revenue: number;
-    bookings: number;
-    ticketsSold: number;
-  }>;
-  movieSales: Array<{
-    movieTitle: string;
     revenue: number;
     bookings: number;
     ticketsSold: number;
@@ -73,10 +68,8 @@ interface SalesReport {
 }
 
 interface OccupancyReport {
-  totalSeats: number;
-  bookedSeats: number;
-  occupancyRate: number;
-  showtimeOccupancy: Array<{
+  showtimeOccupancies: Array<{
+    showtimeId: string;
     movieTitle: string;
     startTime: string;
     screenNumber: number;
@@ -84,6 +77,8 @@ interface OccupancyReport {
     bookedSeats: number;
     occupancyRate: number;
   }>;
+  averageOccupancyRate: number;
+  totalShowtimes: number;
 }
 
 const Reports: React.FC = () => {
@@ -131,9 +126,7 @@ const Reports: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/admin/reports/occupancy', {
-        params: { startDate, endDate }
-      });
+      const response = await api.get('/admin/reports/occupancy');
       if (response.data.success) {
         setOccupancyReport(response.data.data);
       }
@@ -146,10 +139,7 @@ const Reports: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `LKR ${amount.toFixed(2)}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -189,7 +179,7 @@ const Reports: React.FC = () => {
 
         <div class="summary">
           <div class="summary-item">
-            <h3>$${salesReport.totalRevenue.toFixed(2)}</h3>
+            <h3>LKR ${salesReport.totalRevenue.toFixed(2)}</h3>
             <p>Total Revenue</p>
           </div>
           <div class="summary-item">
@@ -201,7 +191,7 @@ const Reports: React.FC = () => {
             <p>Tickets Sold</p>
           </div>
           <div class="summary-item">
-            <h3>$${salesReport.averageTicketPrice.toFixed(2)}</h3>
+            <h3>LKR ${(salesReport.totalRevenue / salesReport.totalTicketsSold).toFixed(2)}</h3>
             <p>Avg. Ticket Price</p>
           </div>
         </div>
@@ -220,7 +210,7 @@ const Reports: React.FC = () => {
             ${(salesReport.dailySales || []).map(day => `
               <tr>
                 <td>${formatDate(day.date)}</td>
-                <td class="currency">$${day.revenue.toFixed(2)}</td>
+                <td class="currency">LKR ${day.revenue.toFixed(2)}</td>
                 <td class="currency">${day.bookings}</td>
                 <td class="currency">${day.ticketsSold}</td>
               </tr>
@@ -228,27 +218,7 @@ const Reports: React.FC = () => {
           </tbody>
         </table>
 
-        <h2>Sales by Movie</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Movie</th>
-              <th class="currency">Revenue</th>
-              <th class="currency">Bookings</th>
-              <th class="currency">Tickets Sold</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(salesReport.movieSales || []).map(movie => `
-              <tr>
-                <td>${movie.movieTitle}</td>
-                <td class="currency">$${movie.revenue.toFixed(2)}</td>
-                <td class="currency">${movie.bookings}</td>
-                <td class="currency">${movie.ticketsSold}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+
       </body>
       </html>
     `;
@@ -294,15 +264,15 @@ const Reports: React.FC = () => {
 
         <div class="summary">
           <div class="summary-item">
-            <h3>${occupancyReport.totalSeats}</h3>
+            <h3>${occupancyReport.showtimeOccupancies.reduce((total: number, showtime: any) => total + showtime.totalSeats, 0)}</h3>
             <p>Total Seats</p>
           </div>
           <div class="summary-item">
-            <h3>${occupancyReport.bookedSeats}</h3>
+            <h3>${occupancyReport.showtimeOccupancies.reduce((total: number, showtime: any) => total + showtime.bookedSeats, 0)}</h3>
             <p>Booked Seats</p>
           </div>
           <div class="summary-item">
-            <h3>${(occupancyReport.occupancyRate * 100).toFixed(1)}%</h3>
+            <h3>${occupancyReport.averageOccupancyRate.toFixed(1)}%</h3>
             <p>Occupancy Rate</p>
           </div>
         </div>
@@ -320,14 +290,14 @@ const Reports: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            ${(occupancyReport.showtimeOccupancy || []).map(showtime => `
+            ${(occupancyReport.showtimeOccupancies || []).map((showtime: any) => `
               <tr>
                 <td>${showtime.movieTitle}</td>
                 <td>${formatDateTime(showtime.startTime)}</td>
                 <td>Screen ${showtime.screenNumber}</td>
                 <td class="center">${showtime.totalSeats}</td>
                 <td class="center">${showtime.bookedSeats}</td>
-                <td class="center">${(showtime.occupancyRate * 100).toFixed(1)}%</td>
+                <td class="center">${showtime.occupancyRate.toFixed(1)}%</td>
               </tr>
             `).join('')}
           </tbody>
@@ -503,7 +473,10 @@ const Reports: React.FC = () => {
                           <TrendingUp color="primary" sx={{ mr: 2 }} />
                           <Box>
                             <Typography variant="h5" component="div">
-                              {formatCurrency(salesReport.averageTicketPrice)}
+                              {salesReport.totalTicketsSold > 0
+                                ? formatCurrency(salesReport.totalRevenue / salesReport.totalTicketsSold)
+                                : 'LKR 0.00'
+                              }
                             </Typography>
                             <Typography color="text.secondary">
                               Avg. Ticket Price
@@ -542,37 +515,7 @@ const Reports: React.FC = () => {
                   </Table>
                 </TableContainer>
 
-                {/* Movie Sales */}
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  Sales by Movie
-                </Typography>
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Movie</TableCell>
-                        <TableCell align="right">Revenue</TableCell>
-                        <TableCell align="right">Bookings</TableCell>
-                        <TableCell align="right">Tickets Sold</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(salesReport.movieSales || []).map((movie, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <Movie sx={{ mr: 1, fontSize: 20 }} />
-                              {movie.movieTitle}
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">{formatCurrency(movie.revenue)}</TableCell>
-                          <TableCell align="right">{movie.bookings}</TableCell>
-                          <TableCell align="right">{movie.ticketsSold}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+
               </>
             ) : (
               <Box textAlign="center" py={4}>
@@ -614,7 +557,7 @@ const Reports: React.FC = () => {
                           <EventSeat color="primary" sx={{ mr: 2 }} />
                           <Box>
                             <Typography variant="h5" component="div">
-                              {occupancyReport.totalSeats}
+                              {occupancyReport.showtimeOccupancies.reduce((total, showtime) => total + showtime.totalSeats, 0)}
                             </Typography>
                             <Typography color="text.secondary">
                               Total Seats
@@ -631,7 +574,7 @@ const Reports: React.FC = () => {
                           <EventSeat color="success" sx={{ mr: 2 }} />
                           <Box>
                             <Typography variant="h5" component="div">
-                              {occupancyReport.bookedSeats}
+                              {occupancyReport.showtimeOccupancies.reduce((total, showtime) => total + showtime.bookedSeats, 0)}
                             </Typography>
                             <Typography color="text.secondary">
                               Booked Seats
@@ -648,10 +591,10 @@ const Reports: React.FC = () => {
                           <TrendingUp color="primary" sx={{ mr: 2 }} />
                           <Box>
                             <Typography variant="h5" component="div">
-                              {(occupancyReport.occupancyRate * 100).toFixed(1)}%
+                              {occupancyReport.averageOccupancyRate.toFixed(1)}%
                             </Typography>
                             <Typography color="text.secondary">
-                              Occupancy Rate
+                              Avg. Occupancy Rate
                             </Typography>
                           </Box>
                         </Box>
@@ -677,7 +620,7 @@ const Reports: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(occupancyReport.showtimeOccupancy || []).map((showtime, index) => (
+                      {(occupancyReport.showtimeOccupancies || []).map((showtime, index) => (
                         <TableRow key={index}>
                           <TableCell>
                             <Box display="flex" alignItems="center">
@@ -691,10 +634,10 @@ const Reports: React.FC = () => {
                           <TableCell align="right">{showtime.bookedSeats}</TableCell>
                           <TableCell align="right">
                             <Chip
-                              label={`${(showtime.occupancyRate * 100).toFixed(1)}%`}
+                              label={`${showtime.occupancyRate.toFixed(1)}%`}
                               color={
-                                showtime.occupancyRate >= 0.8 ? 'success' :
-                                showtime.occupancyRate >= 0.5 ? 'warning' : 'error'
+                                showtime.occupancyRate >= 80 ? 'success' :
+                                showtime.occupancyRate >= 50 ? 'warning' : 'error'
                               }
                               size="small"
                             />
