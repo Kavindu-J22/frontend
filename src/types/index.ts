@@ -29,6 +29,7 @@ export interface Movie {
 export interface Showtime {
   id: string;
   movieId: string;
+  movieTitle?: string; // Optional for backward compatibility
   startTime: string;
   endTime: string;
   screenNumber: number;
