@@ -51,7 +51,27 @@ const MovieDetails: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return 'N/A';
+
+    // Handle different date formats
+    let date;
+    if (dateString.includes('T')) {
+      // ISO format: 2024-01-15T00:00:00.000Z
+      date = new Date(dateString);
+    } else if (dateString.includes('-')) {
+      // Date only format: 2024-01-15
+      date = new Date(dateString + 'T00:00:00');
+    } else {
+      date = new Date(dateString);
+    }
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date format:', dateString);
+      return 'Invalid Date';
+    }
+
+    return date.toLocaleDateString();
   };
 
   const formatTime = (dateString: string) => {
@@ -215,7 +235,7 @@ const MovieDetails: React.FC = () => {
                             Available Seats: {showtime.availableSeats || showtime.totalSeats}
                           </Typography>
                           <Typography variant="h6" color="primary" gutterBottom>
-                            ${showtime.ticketPrice}
+                            LKR {showtime.ticketPrice}
                           </Typography>
                           <Button
                             fullWidth

@@ -77,12 +77,15 @@ const TicketValidation: React.FC = () => {
     setTicketDetails(null);
 
     try {
-      let response;
-
       if (validationType === 'qr') {
-        response = await api.post('/tickets/validate', null, {
+        const response = await api.post('/tickets/validate', null, {
           params: { qrCodeData: qrCodeData.trim() }
         });
+
+        if (response.data.success) {
+          setTicketDetails(response.data.data);
+          setSuccess('Ticket validated successfully!');
+        }
       } else {
         // Validate by booking ID - first check if booking exists
         try {
@@ -95,40 +98,85 @@ const TicketValidation: React.FC = () => {
           }
 
           // Now try to get the ticket
-          const ticketResponse = await api.get(`/tickets/booking/${bookingId.trim()}`);
-          const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
+          try {
+            const ticketResponse = await api.get(`/tickets/booking/${bookingId.trim()}`);
+            const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
 
-          // Combine ticket and booking data
-          const ticketData = ticketResponse.data.data;
-          const showtimeData = showtimeResponse.data.data;
+            // Combine ticket and booking data
+            const ticketData = ticketResponse.data.data;
+            const showtimeData = showtimeResponse.data.data;
 
-          setTicketDetails({
-            ...ticketData,
-            booking: {
-              ...bookingData,
-              showtime: {
-                movieTitle: showtimeData.movieTitle,
-                startTime: showtimeData.startTime,
-                screenNumber: showtimeData.screenNumber,
+            setTicketDetails({
+              ...ticketData,
+              booking: {
+                ...bookingData,
+                showtime: {
+                  movieTitle: showtimeData.movieTitle,
+                  startTime: showtimeData.startTime,
+                  screenNumber: showtimeData.screenNumber,
+                }
               }
-            }
-          });
-          setSuccess('Ticket found and validated successfully!');
-          return;
+            });
+            setSuccess('Ticket found and validated successfully!');
+            return;
 
-        } catch (ticketError: any) {
-          if (ticketError.response?.status === 404) {
-            setError(`Booking ID ${bookingId.trim()} exists but no ticket has been generated yet. This usually means the booking payment is not confirmed.`);
+          } catch (ticketError: any) {
+            if (ticketError.response?.status === 404) {
+              // Ticket doesn't exist for confirmed booking - try to generate it
+              try {
+                setError('Ticket not found. Attempting to generate ticket for confirmed booking...');
+
+                // Try to generate the ticket by calling the backend
+                const generateResponse = await api.post(`/admin/tickets/generate/${bookingId.trim()}`);
+
+                if (generateResponse.data.success) {
+                  // Now try to get the newly generated ticket
+                  const newTicketResponse = await api.get(`/tickets/booking/${bookingId.trim()}`);
+                  const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
+
+                  const ticketData = newTicketResponse.data.data;
+                  const showtimeData = showtimeResponse.data.data;
+
+                  setTicketDetails({
+                    ...ticketData,
+                    booking: {
+                      ...bookingData,
+                      showtime: {
+                        movieTitle: showtimeData.movieTitle,
+                        startTime: showtimeData.startTime,
+                        screenNumber: showtimeData.screenNumber,
+                      }
+                    }
+                  });
+                  setSuccess('Ticket generated and validated successfully!');
+                  setError(null);
+                  return;
+                }
+              } catch (generateError: any) {
+                console.error('Failed to generate ticket:', generateError);
+                // If the generate endpoint doesn't exist or fails, show a helpful message
+                setError(`Booking ID ${bookingId.trim()} is confirmed but no ticket exists. This can happen if:
+                1. The payment was processed but ticket generation failed
+                2. There was a system error during ticket creation
+                3. The booking was manually confirmed without payment
+
+Please check the payment status and contact system administrator if needed.`);
+                return;
+              }
+            } else {
+              setError(`Error retrieving ticket: ${ticketError.response?.data?.message || ticketError.message}`);
+              return;
+            }
+          }
+
+        } catch (bookingError: any) {
+          if (bookingError.response?.status === 404) {
+            setError(`Booking ID ${bookingId.trim()} not found.`);
           } else {
-            setError(`Error validating booking: ${ticketError.response?.data?.message || ticketError.message}`);
+            setError(`Error validating booking: ${bookingError.response?.data?.message || bookingError.message}`);
           }
           return;
         }
-      }
-
-      if (response.data.success) {
-        setTicketDetails(response.data.data);
-        setSuccess('Ticket validated successfully!');
       }
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to validate ticket');
