@@ -53,14 +53,21 @@ interface TicketDetails {
 
 const TicketValidation: React.FC = () => {
   const [qrCodeData, setQrCodeData] = useState('');
+  const [bookingId, setBookingId] = useState('');
+  const [validationType, setValidationType] = useState<'qr' | 'booking'>('qr');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [ticketDetails, setTicketDetails] = useState<TicketDetails | null>(null);
 
   const handleValidateTicket = async () => {
-    if (!qrCodeData.trim()) {
+    if (validationType === 'qr' && !qrCodeData.trim()) {
       setError('Please enter QR code data');
+      return;
+    }
+
+    if (validationType === 'booking' && !bookingId.trim()) {
+      setError('Please enter booking ID');
       return;
     }
 
@@ -70,9 +77,41 @@ const TicketValidation: React.FC = () => {
     setTicketDetails(null);
 
     try {
-      const response = await api.post('/tickets/validate', null, {
-        params: { qrCodeData: qrCodeData.trim() }
-      });
+      let response;
+
+      if (validationType === 'qr') {
+        response = await api.post('/tickets/validate', null, {
+          params: { qrCodeData: qrCodeData.trim() }
+        });
+      } else {
+        // Validate by booking ID - get ticket details for the booking
+        response = await api.get(`/tickets/booking/${bookingId.trim()}`);
+
+        if (response.data.success) {
+          // Also get booking details to show complete information
+          const bookingResponse = await api.get(`/bookings/${bookingId.trim()}`);
+          const showtimeResponse = await api.get(`/showtimes/${bookingResponse.data.data.showtimeId}`);
+
+          // Combine ticket and booking data
+          const ticketData = response.data.data;
+          const bookingData = bookingResponse.data.data;
+          const showtimeData = showtimeResponse.data.data;
+
+          setTicketDetails({
+            ...ticketData,
+            booking: {
+              ...bookingData,
+              showtime: {
+                movieTitle: showtimeData.movieTitle,
+                startTime: showtimeData.startTime,
+                screenNumber: showtimeData.screenNumber,
+              }
+            }
+          });
+          setSuccess('Ticket found and validated successfully!');
+          return;
+        }
+      }
 
       if (response.data.success) {
         setTicketDetails(response.data.data);
@@ -88,6 +127,7 @@ const TicketValidation: React.FC = () => {
 
   const handleClearForm = () => {
     setQrCodeData('');
+    setBookingId('');
     setError(null);
     setSuccess(null);
     setTicketDetails(null);
@@ -107,33 +147,79 @@ const TicketValidation: React.FC = () => {
           Scan or enter QR code data to validate movie tickets
         </Typography>
 
-        {/* QR Code Input */}
+        {/* Validation Type Selector */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+              Validation Method
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  variant={validationType === 'qr' ? 'contained' : 'outlined'}
+                  fullWidth
+                  startIcon={<QrCodeScanner />}
+                  onClick={() => setValidationType('qr')}
+                >
+                  QR Code Validation
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  variant={validationType === 'booking' ? 'contained' : 'outlined'}
+                  fullWidth
+                  startIcon={<CheckCircle />}
+                  onClick={() => setValidationType('booking')}
+                >
+                  Booking ID Validation
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Validation Input */}
         <Card sx={{ mb: 4 }}>
           <CardContent>
             <Box display="flex" alignItems="center" mb={3}>
-              <QrCodeScanner sx={{ mr: 2, color: 'primary.main' }} />
+              {validationType === 'qr' ? (
+                <QrCodeScanner sx={{ mr: 2, color: 'primary.main' }} />
+              ) : (
+                <CheckCircle sx={{ mr: 2, color: 'primary.main' }} />
+              )}
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                Enter QR Code Data
+                {validationType === 'qr' ? 'Enter QR Code Data' : 'Enter Booking ID'}
               </Typography>
             </Box>
 
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={8}>
-                <TextField
-                  fullWidth
-                  label="QR Code Data"
-                  value={qrCodeData}
-                  onChange={(e) => setQrCodeData(e.target.value)}
-                  placeholder="MOVIE_TICKET:booking_id:timestamp"
-                  disabled={loading}
-                />
+                {validationType === 'qr' ? (
+                  <TextField
+                    fullWidth
+                    label="QR Code Data"
+                    value={qrCodeData}
+                    onChange={(e) => setQrCodeData(e.target.value)}
+                    placeholder="MOVIE_TICKET:booking_id:timestamp"
+                    disabled={loading}
+                  />
+                ) : (
+                  <TextField
+                    fullWidth
+                    label="Booking ID"
+                    value={bookingId}
+                    onChange={(e) => setBookingId(e.target.value)}
+                    placeholder="Enter booking ID (e.g., BK1234567890)"
+                    disabled={loading}
+                  />
+                )}
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Box display="flex" gap={1}>
                   <Button
                     variant="contained"
                     onClick={handleValidateTicket}
-                    disabled={loading || !qrCodeData.trim()}
+                    disabled={loading || (validationType === 'qr' ? !qrCodeData.trim() : !bookingId.trim())}
                     startIcon={loading ? <CircularProgress size={20} /> : <CheckCircle />}
                     fullWidth
                   >

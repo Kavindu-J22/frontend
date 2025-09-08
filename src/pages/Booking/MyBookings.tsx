@@ -151,6 +151,162 @@ const MyBookings: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const downloadTicketPDF = (booking: BookingWithDetails) => {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Movie Ticket</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+          }
+          .ticket {
+            background: white;
+            color: black;
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          }
+          .ticket-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+          }
+          .ticket-body {
+            padding: 30px;
+          }
+          .movie-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .booking-ref {
+            font-size: 16px;
+            opacity: 0.9;
+            font-family: monospace;
+          }
+          .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+          }
+          .detail-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+          }
+          .detail-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .detail-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+          }
+          .qr-section {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+          }
+          .total-amount {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ticket">
+          <div class="ticket-header">
+            <div class="movie-title">${booking.movieTitle || 'Movie Ticket'}</div>
+            <div class="booking-ref">Booking: ${booking.bookingReference || booking.id}</div>
+          </div>
+
+          <div class="ticket-body">
+            <div class="details-grid">
+              <div class="detail-item">
+                <div class="detail-label">Show Time</div>
+                <div class="detail-value">${booking.startTime ? formatDateTime(booking.startTime) : 'N/A'}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Screen</div>
+                <div class="detail-value">Screen ${booking.screenNumber || 'N/A'}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Seats</div>
+                <div class="detail-value">${booking.bookedSeatNumbers.join(', ')}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Status</div>
+                <div class="detail-value">${booking.status}</div>
+              </div>
+            </div>
+
+            <div class="total-amount">
+              Total: $${booking.totalPrice.toFixed(2)}
+            </div>
+
+            ${booking.qrCodeImageBase64 ? `
+              <div class="qr-section">
+                <div class="detail-label">Show this QR code at the cinema</div>
+                <img src="data:image/png;base64,${booking.qrCodeImageBase64}"
+                     alt="QR Code" style="max-width: 200px; margin-top: 10px;" />
+              </div>
+            ` : ''}
+
+            <div class="footer">
+              <p>Thank you for choosing our cinema!</p>
+              <p>Please arrive 15 minutes before showtime</p>
+              <p>Generated on: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Create and download PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -362,12 +518,10 @@ const MyBookings: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<Download />}
-              onClick={() => {
-                // In a real app, this would generate and download a PDF ticket
-                alert('Download feature would be implemented here');
-              }}
+              onClick={() => selectedBooking && downloadTicketPDF(selectedBooking)}
+              disabled={!selectedBooking}
             >
-              Download
+              Download PDF
             </Button>
           </DialogActions>
         </Dialog>

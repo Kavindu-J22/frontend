@@ -129,10 +129,51 @@ const AdminDashboard: React.FC = () => {
         api.get('/admin/reports/dashboard'),
       ]);
 
-      setMovies(moviesRes.data.data || []);
-      setShowtimes(showtimesRes.data.data || []);
-      setUsers(usersRes.data.data || []);
-      setBookings(bookingsRes.data.data || []);
+      const moviesData = moviesRes.data.data || [];
+      const showtimesData = showtimesRes.data.data || [];
+      const usersData = usersRes.data.data || [];
+      const bookingsData = bookingsRes.data.data || [];
+
+      // Enhance bookings with user and movie information
+      const enhancedBookings = await Promise.all(
+        bookingsData.map(async (booking: any) => {
+          try {
+            // Get user information
+            const user = usersData.find((u: any) => u.id === booking.userId);
+
+            // Get showtime information to get movie details
+            let movieTitle = 'Unknown Movie';
+            try {
+              const showtimeResponse = await api.get(`/showtimes/${booking.showtimeId}`);
+              if (showtimeResponse.data.success) {
+                movieTitle = showtimeResponse.data.data.movieTitle;
+              }
+            } catch (showtimeError) {
+              console.error('Failed to fetch showtime for booking:', booking.id);
+            }
+
+            return {
+              ...booking,
+              userEmail: user ? user.email : 'Unknown User',
+              userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
+              movieTitle,
+            };
+          } catch (error) {
+            console.error('Error enhancing booking:', booking.id, error);
+            return {
+              ...booking,
+              userEmail: 'Unknown User',
+              userName: 'Unknown User',
+              movieTitle: 'Unknown Movie',
+            };
+          }
+        })
+      );
+
+      setMovies(moviesData);
+      setShowtimes(showtimesData);
+      setUsers(usersData);
+      setBookings(enhancedBookings);
       setStats(statsRes.data.data || {});
     } catch (error: any) {
       setError('Failed to load dashboard data');
@@ -574,11 +615,11 @@ const AdminDashboard: React.FC = () => {
                 <TableBody>
                   {bookings.map((booking) => (
                     <TableRow key={booking.id}>
-                      <TableCell>{booking.id?.slice(-8)}</TableCell>
-                      <TableCell>{booking.userEmail}</TableCell>
-                      <TableCell>{booking.movieTitle}</TableCell>
-                      <TableCell>{booking.selectedSeats?.join(', ')}</TableCell>
-                      <TableCell>${booking.totalAmount}</TableCell>
+                      <TableCell>{booking.bookingReference || booking.id?.slice(-8)}</TableCell>
+                      <TableCell>{booking.userEmail || 'Unknown User'}</TableCell>
+                      <TableCell>{booking.movieTitle || 'Unknown Movie'}</TableCell>
+                      <TableCell>{booking.bookedSeatNumbers?.join(', ') || 'N/A'}</TableCell>
+                      <TableCell>${booking.totalPrice?.toFixed(2) || '0.00'}</TableCell>
                       <TableCell>
                         <Chip
                           label={booking.status}

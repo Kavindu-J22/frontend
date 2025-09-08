@@ -28,6 +28,7 @@ import {
   AttachMoney,
   Movie,
   DateRange,
+  Download,
 } from '@mui/icons-material';
 import api from '../../config/api';
 
@@ -159,6 +160,194 @@ const Reports: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const downloadSalesReportPDF = () => {
+    if (!salesReport) return;
+
+    // Create HTML content for PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Sales Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .summary { display: flex; justify-content: space-around; margin-bottom: 30px; }
+          .summary-item { text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          .currency { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Sales Report</h1>
+          <p>Period: ${formatDate(startDate)} to ${formatDate(endDate)}</p>
+          <p>Generated on: ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <h3>$${salesReport.totalRevenue.toFixed(2)}</h3>
+            <p>Total Revenue</p>
+          </div>
+          <div class="summary-item">
+            <h3>${salesReport.totalBookings}</h3>
+            <p>Total Bookings</p>
+          </div>
+          <div class="summary-item">
+            <h3>${salesReport.totalTicketsSold}</h3>
+            <p>Tickets Sold</p>
+          </div>
+          <div class="summary-item">
+            <h3>$${salesReport.averageTicketPrice.toFixed(2)}</h3>
+            <p>Avg. Ticket Price</p>
+          </div>
+        </div>
+
+        <h2>Daily Sales Breakdown</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="currency">Revenue</th>
+              <th class="currency">Bookings</th>
+              <th class="currency">Tickets Sold</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(salesReport.dailySales || []).map(day => `
+              <tr>
+                <td>${formatDate(day.date)}</td>
+                <td class="currency">$${day.revenue.toFixed(2)}</td>
+                <td class="currency">${day.bookings}</td>
+                <td class="currency">${day.ticketsSold}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <h2>Sales by Movie</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Movie</th>
+              <th class="currency">Revenue</th>
+              <th class="currency">Bookings</th>
+              <th class="currency">Tickets Sold</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(salesReport.movieSales || []).map(movie => `
+              <tr>
+                <td>${movie.movieTitle}</td>
+                <td class="currency">$${movie.revenue.toFixed(2)}</td>
+                <td class="currency">${movie.bookings}</td>
+                <td class="currency">${movie.ticketsSold}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // Create and download PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
+  const downloadOccupancyReportPDF = () => {
+    if (!occupancyReport) return;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Occupancy Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .summary { display: flex; justify-content: space-around; margin-bottom: 30px; }
+          .summary-item { text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          .center { text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Occupancy Report</h1>
+          <p>Period: ${formatDate(startDate)} to ${formatDate(endDate)}</p>
+          <p>Generated on: ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <h3>${occupancyReport.totalSeats}</h3>
+            <p>Total Seats</p>
+          </div>
+          <div class="summary-item">
+            <h3>${occupancyReport.bookedSeats}</h3>
+            <p>Booked Seats</p>
+          </div>
+          <div class="summary-item">
+            <h3>${(occupancyReport.occupancyRate * 100).toFixed(1)}%</h3>
+            <p>Occupancy Rate</p>
+          </div>
+        </div>
+
+        <h2>Occupancy by Showtime</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Movie</th>
+              <th>Show Time</th>
+              <th>Screen</th>
+              <th class="center">Total Seats</th>
+              <th class="center">Booked Seats</th>
+              <th class="center">Occupancy Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(occupancyReport.showtimeOccupancy || []).map(showtime => `
+              <tr>
+                <td>${showtime.movieTitle}</td>
+                <td>${formatDateTime(showtime.startTime)}</td>
+                <td>Screen ${showtime.screenNumber}</td>
+                <td class="center">${showtime.totalSeats}</td>
+                <td class="center">${showtime.bookedSeats}</td>
+                <td class="center">${(showtime.occupancyRate * 100).toFixed(1)}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
@@ -243,6 +432,17 @@ const Reports: React.FC = () => {
               </Box>
             ) : salesReport ? (
               <>
+                {/* Download Button */}
+                <Box display="flex" justifyContent="flex-end" mb={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download />}
+                    onClick={downloadSalesReportPDF}
+                  >
+                    Download PDF
+                  </Button>
+                </Box>
+
                 {/* Sales Summary */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                   <Grid item xs={12} sm={6} md={3}>
@@ -330,7 +530,7 @@ const Reports: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {salesReport.dailySales.map((day, index) => (
+                      {(salesReport.dailySales || []).map((day, index) => (
                         <TableRow key={index}>
                           <TableCell>{formatDate(day.date)}</TableCell>
                           <TableCell align="right">{formatCurrency(day.revenue)}</TableCell>
@@ -357,7 +557,7 @@ const Reports: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {salesReport.movieSales.map((movie, index) => (
+                      {(salesReport.movieSales || []).map((movie, index) => (
                         <TableRow key={index}>
                           <TableCell>
                             <Box display="flex" alignItems="center">
@@ -394,6 +594,17 @@ const Reports: React.FC = () => {
               </Box>
             ) : occupancyReport ? (
               <>
+                {/* Download Button */}
+                <Box display="flex" justifyContent="flex-end" mb={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download />}
+                    onClick={downloadOccupancyReportPDF}
+                  >
+                    Download PDF
+                  </Button>
+                </Box>
+
                 {/* Occupancy Summary */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                   <Grid item xs={12} sm={4}>
@@ -466,7 +677,7 @@ const Reports: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {occupancyReport.showtimeOccupancy.map((showtime, index) => (
+                      {(occupancyReport.showtimeOccupancy || []).map((showtime, index) => (
                         <TableRow key={index}>
                           <TableCell>
                             <Box display="flex" alignItems="center">
