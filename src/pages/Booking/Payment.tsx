@@ -34,12 +34,18 @@ import api from '../../config/api';
 
 interface BookingDetails {
   id: string;
-  movieTitle: string;
-  startTime: string;
-  screenNumber: number;
-  selectedSeats: string[];
-  totalAmount: number;
-  status: string;
+  showtimeId: string;
+  userId: string;
+  bookedSeatNumbers: string[];
+  totalPrice: number;
+  status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
+  bookingReference: string;
+  createdAt: string;
+  updatedAt: string;
+  // Additional fields for display
+  movieTitle?: string;
+  startTime?: string;
+  screenNumber?: number;
 }
 
 const Payment: React.FC = () => {
@@ -73,9 +79,29 @@ const Payment: React.FC = () => {
       setLoading(true);
       const response = await api.get(`/bookings/${bookingId}`);
       if (response.data.success) {
-        setBookingDetails(response.data.data);
+        const bookingData = response.data.data;
+
+        // Fetch showtime details to get movie title and show time
+        let showtimeDetails = null;
+        try {
+          const showtimeResponse = await api.get(`/showtimes/${bookingData.showtimeId}`);
+          if (showtimeResponse.data.success) {
+            showtimeDetails = showtimeResponse.data.data;
+          }
+        } catch (showtimeError) {
+          console.error('Failed to fetch showtime details:', showtimeError);
+        }
+
+        // Combine booking data with showtime details
+        setBookingDetails({
+          ...bookingData,
+          movieTitle: showtimeDetails?.movieTitle || 'Unknown Movie',
+          startTime: showtimeDetails?.startTime,
+          screenNumber: showtimeDetails?.screenNumber,
+        });
       }
     } catch (error: any) {
+      console.error('Error fetching booking details:', error);
       setError('Failed to fetch booking details');
     } finally {
       setLoading(false);
@@ -140,7 +166,7 @@ const Payment: React.FC = () => {
         expiryMonth: paymentForm.expiryMonth,
         expiryYear: paymentForm.expiryYear,
         cvv: paymentForm.cvv,
-        amount: bookingDetails!.totalAmount,
+        amount: bookingDetails!.totalPrice,
       };
 
       const response = await dispatch(processPayment({
@@ -230,19 +256,19 @@ const Payment: React.FC = () => {
                   <Box display="flex" alignItems="center" mb={1}>
                     <Schedule sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body2">
-                      {formatDateTime(bookingDetails.startTime)}
+                      {bookingDetails.startTime ? formatDateTime(bookingDetails.startTime) : 'N/A'}
                     </Typography>
                   </Box>
                   <Box display="flex" alignItems="center" mb={1}>
                     <Movie sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body2">
-                      Screen {bookingDetails.screenNumber}
+                      Screen {bookingDetails.screenNumber || 'N/A'}
                     </Typography>
                   </Box>
                   <Box display="flex" alignItems="center" mb={1}>
                     <EventSeat sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body2">
-                      Seats: {bookingDetails.selectedSeats.join(', ')}
+                      Seats: {bookingDetails.bookedSeatNumbers?.join(', ') || 'N/A'}
                     </Typography>
                   </Box>
                 </Box>
@@ -254,7 +280,7 @@ const Payment: React.FC = () => {
                     Total Amount
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    ${bookingDetails.totalAmount.toFixed(2)}
+                    ${bookingDetails.totalPrice.toFixed(2)}
                   </Typography>
                 </Box>
 
@@ -374,7 +400,7 @@ const Payment: React.FC = () => {
                   startIcon={paymentProcessing ? <CircularProgress size={20} /> : <CheckCircle />}
                   sx={{ flex: 2 }}
                 >
-                  {paymentProcessing ? 'Processing Payment...' : `Pay $${bookingDetails.totalAmount.toFixed(2)}`}
+                  {paymentProcessing ? 'Processing Payment...' : `Pay $${bookingDetails.totalPrice.toFixed(2)}`}
                 </Button>
               </Box>
 

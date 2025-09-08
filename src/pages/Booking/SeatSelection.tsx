@@ -153,7 +153,6 @@ const SeatSelection: React.FC = () => {
       const bookingData = {
         showtimeId: showtimeId!,
         seatNumbers: selectedSeats,
-        totalAmount: selectedSeats.length * (showtimeDetails?.ticketPrice || 0),
       };
 
       const response = await dispatch(createBooking(bookingData) as any);
